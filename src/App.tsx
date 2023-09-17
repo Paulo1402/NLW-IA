@@ -1,12 +1,13 @@
-import { FileVideo, Github } from 'lucide-react'
+import { FileVideo, Github, Upload } from 'lucide-react'
 import { Button } from './components/ui/button'
 import { Separator } from './components/ui/separator'
 import { Textarea } from './components/ui/textarea'
+import { Label } from './components/ui/label'
 
 function App() {
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="px-6 py-3 flex items-center justify-between border-b">
+      <div className="px-6 py-3 flex items-center justify-between border-b gap-8">
         <h1 className="text-xl font-bold">upload.ai</h1>
 
         <div className="flex items-center gap-3">
@@ -63,7 +64,29 @@ function App() {
 
             <Separator />
 
-            <div className='space-y-1'></div>
+            <div className="space-y-2">
+              <Label htmlFor="transcription_prompt">
+                Prompt de transcrição
+              </Label>
+              <Textarea
+                id="transcription_prompt"
+                className="h-20 leading-relaxed resize-none"
+                placeholder="Inclua palavras-chave mencionadas no vídeo separadas por vírgula (,)"
+              />
+            </div>
+
+            <Button className='w-full' type='submit'>
+              Carregar vídeo
+              <Upload className='w-4 h-4 ml-2' />
+            </Button>
+          </form>
+
+          <Separator />
+
+          <form className='space-y-6'>
+            <div className='space-y-2'>
+              <Label>Modelo</Label>
+            </div>
           </form>
         </aside>
       </main>
