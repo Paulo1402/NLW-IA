@@ -6,9 +6,21 @@ import { Label } from './ui/label'
 import { ChangeEvent, useState, useMemo, useRef, FormEvent } from 'react'
 import { getFFmpeg } from '@/lib/ffmpeg'
 import { fetchFile } from '@ffmpeg/util'
+import { api } from '@/lib/axios'
+
+type Status = 'waiting' | 'converting' | 'uploading' | 'generating' | 'success'
+
+const statusMessages = {
+  converting: 'Convertendo...',
+  generating: 'Transcrevendo...',
+  uploading: 'Carregando...',
+  success: 'Sucesso!'
+}
 
 export function VideoInputForm() {
   const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [status, setStatus] = useState<Status>('waiting')
+
   const promptInputRef = useRef<HTMLTextAreaElement>(null)
 
   function handleFileSelected(event: ChangeEvent<HTMLInputElement>) {
@@ -25,10 +37,6 @@ export function VideoInputForm() {
 
     const ffmpeg = await getFFmpeg()
     await ffmpeg.writeFile('input.mp4', await fetchFile(video))
-
-    // ffmpeg.on('log', log => {
-    //   console.log(log)
-    // })
 
     ffmpeg.on('progress', progress => {
       console.log('Convert progress: ' + Math.round(progress.progress * 100))
@@ -49,7 +57,7 @@ export function VideoInputForm() {
     const data = await ffmpeg.readFile('output.mp3')
 
     const audioFileBlob = new Blob([data], { type: 'audio/mpeg' })
-    const audioFile = new File([audioFileBlob], 'audio.mp3', {
+    const audioFile = new File([audioFileBlob], 'output.mp3', {
       type: 'audio/mpeg'
     })
 
@@ -65,10 +73,23 @@ export function VideoInputForm() {
 
     if (!videoFile) return
 
-    // Converter o vídeo em áudio
+    setStatus('converting')
 
     const audioFile = await convertVideoToAudio(videoFile)
-    console.log(audioFile)
+    const data = new FormData()
+
+    data.append('file', audioFile)
+
+    setStatus('uploading')
+
+    const response = await api.post('/videos', data)
+    const videoId = response.data.video.id
+
+    setStatus('generating')
+
+    await api.post(`/videos/${videoId}/transcription`, { prompt })
+
+    setStatus('success')
   }
 
   const previewURL = useMemo(() => {
@@ -110,15 +131,22 @@ export function VideoInputForm() {
         <Label htmlFor="transcription_prompt">Prompt de transcrição</Label>
         <Textarea
           ref={promptInputRef}
+          disabled={status !== 'waiting'}
           id="transcription_prompt"
           className="h-20 leading-relaxed resize-none"
           placeholder="Inclua palavras-chave mencionadas no vídeo separadas por vírgula (,)"
         />
       </div>
 
-      <Button className="w-full" type="submit">
-        Carregar vídeo
-        <Upload className="w-4 h-4 ml-2" />
+      <Button data-success={status === 'success'} disabled={status !== 'waiting'} className="w-full data-[success=true]:bg-emerald-400" type="submit">
+        {status === 'waiting' ? (
+          <>
+            Carregar vídeo
+            <Upload className="w-4 h-4 ml-2" />
+          </>
+        ) : (
+          statusMessages[status]
+        )}
       </Button>
     </form>
   )
